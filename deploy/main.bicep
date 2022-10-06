@@ -24,6 +24,7 @@ var appServiceAppName = 'toy-website-${resourceNameSuffix}'
 var appServicePlanName = 'toy-website'
 var applicationInsightsName = 'toywebsite'
 var storageAccountName = 'mystorage${resourceNameSuffix}'
+var storageAccountImagesBlobContainerName = 'toyimages'
 
 // Define the SKUs for each component based on the environment type.
 var environmentConfigurationMap = {
@@ -84,6 +85,18 @@ resource appServiceApp 'Microsoft.Web/sites@2021-01-15' = {
           name: 'ReviewApiKey'
           value: reviewApiKey
         }
+        {
+          name: 'StorageAccountName'
+          value: storageAccount.name
+        }
+        {
+          name: 'StorageAccountBlobEndpoint'
+          value: storageAccount.properties.primaryEndpoints.blob
+        }
+        {
+          name: 'StorageAccountImagesContainerName'
+          value: storageAccount::blobService::storageAccountImagesBlobContainer.name
+        }
       ]
     }
   }
@@ -97,6 +110,7 @@ resource applicationInsights 'Microsoft.Insights/components@2020-02-02' = {
     Application_Type: 'web'
     Request_Source: 'rest'
     Flow_Type: 'Bluefield'
+
   }
 }
 
@@ -105,7 +119,21 @@ resource storageAccount 'Microsoft.Storage/storageAccounts@2021-04-01' = {
   location: location
   kind: 'StorageV2'
   sku: environmentConfigurationMap[environmentType].storageAccount.sku
+
+  resource blobService 'blobServices' = {
+    name: 'default'
+
+    resource storageAccountImagesBlobContainer 'containers' = {
+      name: storageAccountImagesBlobContainerName
+
+      properties: {
+        publicAccess: 'Blob'
+      }
+    }
+  }
 }
 
 output appServiceAppHostName string = appServiceApp.properties.defaultHostName
 output appServiceAppName string = appServiceApp.name
+output storageAccountName string = storageAccount.name
+output storageAccountImagesBlobContainerName string = storageAccount::blobService::storageAccountImagesBlobContainer.name
